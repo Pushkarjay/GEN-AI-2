@@ -1,43 +1,20 @@
-// Service Worker for offline functionality and caching
-const CACHE_NAME = 'venueflow-v1';
-const urlsToCache = [
-    '/',
-    '/index.html',
-    '/styles.css',
-    '/script.js'
-];
-
-// Install Service Worker
-self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(urlsToCache);
-        })
-    );
+// Cache reset worker: remove old caches and unregister itself.
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+    event.waitUntil(Promise.resolve());
 });
 
-// Fetch from cache, fallback to network
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request).then(response => {
-            return response || fetch(event.request);
-        }).catch(() => {
-            return caches.match('/index.html');
-        })
-    );
+self.addEventListener('activate', (event) => {
+    event.waitUntil((async () => {
+        const names = await caches.keys();
+        await Promise.all(names.map((name) => caches.delete(name)));
+
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        await Promise.all(clients.map((client) => client.navigate(client.url)));
+
+        await self.registration.unregister();
+    })());
 });
 
-// Clean up old caches
-self.addEventListener('activate', event => {
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
-});
+// Always pass requests through; no offline cache behavior.
+self.addEventListener('fetch', () => {});
