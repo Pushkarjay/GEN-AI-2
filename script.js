@@ -203,6 +203,9 @@ function updateMetrics() {
 
     // Update zone displays
     updateZoneDisplays();
+    
+    // Update queue management page
+    updateQueueDisplays();
 }
 
 // Update zone displays
@@ -306,6 +309,53 @@ function clearAllAlerts() {
         alert.style.display = 'none';
     });
     showNotification('All alerts cleared', 'info');
+}
+
+// Update queue management page with dynamic data
+function updateQueueDisplays() {
+    if (!venueData || !venueData.zones) return;
+
+    // Calculate queue sizes from zone occupancy
+    const entrance = venueData.zones.entrance;
+    const foodCourt = venueData.zones['food-court'];
+    const restrooms = venueData.zones.restrooms;
+    const parking = venueData.zones.parking;
+
+    // Gates Queue (based on entrance occupancy)
+    if (entrance && document.getElementById('gates-queue')) {
+        const gatesQueue = Math.round((entrance.occupancy / 100) * 300);
+        const gatesWait = Math.round((entrance.occupancy / 3));
+        document.getElementById('gates-queue').textContent = `Queue: ${gatesQueue} people | Wait: ${gatesWait} min`;
+        document.getElementById('gates-progress').style.width = entrance.occupancy + '%';
+        document.getElementById('gates-status').textContent = entrance.occupancy > 80 ? '⚠️ All gates open - near capacity' : 'Gate 1-3: Open | Gate 4: On-call';
+    }
+
+    // Food Court Queue (based on food court occupancy)
+    if (foodCourt && document.getElementById('food-queue')) {
+        const foodQueue = Math.round((foodCourt.occupancy / 100) * 400);
+        const foodWait = foodCourt.waitTime;
+        document.getElementById('food-queue').textContent = `Queue: ${foodQueue} people | Wait: ${foodWait} min`;
+        document.getElementById('food-progress').style.width = foodCourt.occupancy + '%';
+        document.getElementById('food-status').innerHTML = foodCourt.occupancy > 85 ? '🔴 CRITICAL - Open all counters' : '✓ Normal operations';
+    }
+
+    // Restroom Queue (based on restroom occupancy)
+    if (restrooms && document.getElementById('restroom-queue')) {
+        const restroomQueue = Math.round((restrooms.occupancy / 100) * 100);
+        const restroomWait = restrooms.waitTime;
+        document.getElementById('restroom-queue').textContent = `Queue: ${restroomQueue} people | Wait: ${restroomWait} min`;
+        document.getElementById('restroom-progress').style.width = restrooms.occupancy + '%';
+        document.getElementById('restroom-status').textContent = restrooms.occupancy > 70 ? '⚠️ Consider alternate facilities' : '✓ All facilities operational';
+    }
+
+    // Parking Queue (based on parking occupancy)
+    if (parking && document.getElementById('parking-queue')) {
+        const parkingQueue = Math.round((parking.occupancy / 100) * 250);
+        const parkingWait = parking.waitTime;
+        document.getElementById('parking-queue').textContent = `Queue: ${parkingQueue} cars | Wait: ${parkingWait} min`;
+        document.getElementById('parking-progress').style.width = parking.occupancy + '%';
+        document.getElementById('parking-status').textContent = parking.occupancy > 80 ? '🔴 Use alternate lot' : 'Alternate exit route available';
+    }
 }
 
 // Show notification
