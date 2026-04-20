@@ -286,6 +286,19 @@ function switchView(viewName) {
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
     }
+
+    // Refresh data for the selected view
+    if (venueData && venueData.zones) {
+        if (viewName === 'queues') {
+            updateQueueDisplays();
+        } else if (viewName === 'zones') {
+            updateZoneAnalytics();
+        } else if (viewName === 'alerts') {
+            updateAlerts();
+        } else if (viewName === 'dashboard') {
+            updateMetrics();
+        }
+    }
 }
 
 // Optimize queues
