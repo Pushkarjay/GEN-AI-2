@@ -1,0 +1,36 @@
+# node_modules can be excluded if using cloud build
+node_modules/
+
+# Git files
+.git
+.gitignore
+.github/
+
+# Test files
+test/
+*.test.js
+coverage/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+docs/
+examples/
+*.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Development
+.env.local
+.env.*.local
+*.log
+
+# Build artifacts (local)
+dist/
+build/
