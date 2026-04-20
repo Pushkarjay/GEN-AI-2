@@ -234,30 +234,30 @@
                             <div class="chart-bar">
                                 <div class="bar-label">Entrance</div>
                                 <div class="bar-container">
-                                    <div class="bar" style="width: 25%; background: #4CAF50;"></div>
+                                    <div class="bar" id="entrance-bar" style="width: 25%; background: #4CAF50;"></div>
                                 </div>
-                                <div class="bar-value">25%</div>
+                                <div class="bar-value" id="entrance-value">25%</div>
                             </div>
                             <div class="chart-bar">
                                 <div class="bar-label">Main Arena</div>
                                 <div class="bar-container">
-                                    <div class="bar" style="width: 68%; background: #FFC107;"></div>
+                                    <div class="bar" id="arena-bar" style="width: 68%; background: #FFC107;"></div>
                                 </div>
-                                <div class="bar-value">68%</div>
+                                <div class="bar-value" id="arena-value">68%</div>
                             </div>
                             <div class="chart-bar">
                                 <div class="bar-label">Food Court</div>
                                 <div class="bar-container">
-                                    <div class="bar" style="width: 85%; background: #FF5722;"></div>
+                                    <div class="bar" id="food-bar" style="width: 85%; background: #FF5722;"></div>
                                 </div>
-                                <div class="bar-value">85%</div>
+                                <div class="bar-value" id="food-value">85%</div>
                             </div>
                             <div class="chart-bar">
                                 <div class="bar-label">Parking</div>
                                 <div class="bar-container">
-                                    <div class="bar" style="width: 55%; background: #2196F3;"></div>
+                                    <div class="bar" id="parking-bar" style="width: 55%; background: #2196F3;"></div>
                                 </div>
-                                <div class="bar-value">55%</div>
+                                <div class="bar-value" id="parking-value">55%</div>
                             </div>
                         </div>
                     </div>
@@ -269,21 +269,21 @@
                                 <div class="flow-icon">⬇️</div>
                                 <div class="flow-info">
                                     <strong>Entries/min</strong>
-                                    <p>45 people</p>
+                                    <p id="flow-entries">45 people</p>
                                 </div>
                             </div>
                             <div class="flow-item">
                                 <div class="flow-icon">⬆️</div>
                                 <div class="flow-info">
                                     <strong>Exits/min</strong>
-                                    <p>12 people</p>
+                                    <p id="flow-exits">12 people</p>
                                 </div>
                             </div>
                             <div class="flow-item">
                                 <div class="flow-icon">🎯</div>
                                 <div class="flow-info">
                                     <strong>Net Flow</strong>
-                                    <p>+33 people/min</p>
+                                    <p id="flow-net">+33 people/min</p>
                                 </div>
                             </div>
                         </div>
@@ -330,46 +330,8 @@
                     <button class="btn-primary" onclick="clearAllAlerts()">Clear All</button>
                 </div>
 
-                <div class="alerts-container">
-                    <div class="alert alert-warning">
-                        <div class="alert-icon">⚠️</div>
-                        <div class="alert-content">
-                            <strong>Food Court Overcrowding</strong>
-                            <p>Zone capacity at 85%. Recommend redirecting traffic or opening additional counters.</p>
-                            <small>5 minutes ago</small>
-                        </div>
-                        <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
-                    </div>
-
-                    <div class="alert alert-info">
-                        <div class="alert-icon">ℹ️</div>
-                        <div class="alert-content">
-                            <strong>Parking Fill Rate Update</strong>
-                            <p>Parking zone at 55% capacity. Estimated full capacity in 45 minutes.</p>
-                            <small>12 minutes ago</small>
-                        </div>
-                        <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
-                    </div>
-
-                    <div class="alert alert-success">
-                        <div class="alert-icon">✓</div>
-                        <div class="alert-content">
-                            <strong>Queue Optimization Applied</strong>
-                            <p>Automated system opened additional ticket gates. Wait time reduced from 12 to 8 minutes.</p>
-                            <small>18 minutes ago</small>
-                        </div>
-                        <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
-                    </div>
-
-                    <div class="alert alert-info">
-                        <div class="alert-icon">ℹ️</div>
-                        <div class="alert-content">
-                            <strong>Restroom Maintenance Complete</strong>
-                            <p>All restroom facilities fully operational. Expected queue time: 5 minutes.</p>
-                            <small>25 minutes ago</small>
-                        </div>
-                        <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
-                    </div>
+                <div class="alerts-container" id="alerts-list">
+                    <!-- Alerts will be dynamically generated here -->
                 </div>
             </section>
         </main>
