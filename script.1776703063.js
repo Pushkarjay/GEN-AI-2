@@ -708,7 +708,6 @@ if ('serviceWorker' in navigator) {
 setInterval(updateTimeInfo, 1000);
 
 // Export for external use
-window.VenueAPI = VenueAPI;
 window.changeMode = changeMode;
 window.selectZone = selectZone;
 window.switchView = switchView;
