@@ -53,6 +53,8 @@ function connectWebSocket() {
                 if (message.type === 'initial' || message.type === 'update') {
                     venueData = message.data;
                     updateMetrics();
+                    updateZoneDisplays();
+                    updateQueueDisplays();
                     updateTimeInfo();
                 }
             } catch (err) {
@@ -125,6 +127,7 @@ async function changeMode(mode) {
             // Refresh ALL page data
             updateMetrics();
             updateZoneDisplays();
+            updateQueueDisplays();
             
             showNotification(`Switched to ${getModeLabel(mode)}`, 'success');
 
