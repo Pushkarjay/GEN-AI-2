@@ -578,56 +578,113 @@ function showNotification(message, type = 'info') {
     document.body.appendChild(notification);
 
     setTimeout(() => {
-        notification.style.display = 'none';
-    }, 4000);
+        notification.remove();
+    }, 3000);
 }
 
-// API Class for external use
-class VenueAPI {
-    static async getCrowdData() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/venue/data`);
-            return response.ok ? await response.json() : null;
-        } catch (err) {
-            console.error('Failed to get crowd data:', err);
-            return null;
-        }
+
+// --- INSANE LEVEL UPGRADES ---
+
+// Update Performance Page with AI data
+function updatePerformancePage() {
+    if (!venueData) return;
+
+    // AI Insight
+    const aiInsightElem = document.getElementById('aiInsight');
+    if (aiInsightElem && venueData.insight) {
+        aiInsightElem.textContent = venueData.insight;
     }
 
-    static async getZoneData(zone) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/venue/zone/${zone}`);
-            return response.ok ? await response.json() : null;
-        } catch (err) {
-            console.error(`Failed to get data for zone ${zone}:`, err);
-            return null;
-        }
+    // Predicted Crowd
+    const predictedCrowdElem = document.getElementById('predictedCrowd');
+    if (predictedCrowdElem && venueData.predicted) {
+        predictedCrowdElem.textContent = venueData.predicted.toLocaleString();
     }
 
-    static async updateZoneCapacity(zone, occupancy, waitTime) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/venue/zone/${zone}/update`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ occupancy, waitTime })
-            });
-            return response.ok ? await response.json() : null;
-        } catch (err) {
-            console.error(`Failed to update zone ${zone}:`, err);
-            return null;
-        }
+    // Best Exit
+    const bestExitElem = document.getElementById('bestExit');
+    if (bestExitElem && venueData.bestExit) {
+        bestExitElem.textContent = venueData.bestExit.replace('-', ' ').toUpperCase();
     }
 
-    static async getMode() {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/mode`);
-            return response.ok ? await response.json() : null;
-        } catch (err) {
-            console.error('Failed to get mode:', err);
-            return null;
-        }
+    // Real-World Signals
+    const signalsElem = document.getElementById('realWorldSignals');
+    if (signalsElem && venueData.signals) {
+        signalsElem.innerHTML = `
+            <div>Ticket Scans/min: <strong>${venueData.signals.ticketScansPerMin}</strong></div>
+            <div>CCTV Anomalies: <strong>${venueData.signals.cctvAnomalies}</strong></div>
+            <div>Transport Load: <strong>${venueData.signals.publicTransportLoad}%</strong></div>
+        `;
+    }
+
+    // Zone Performance Table
+    const tbody = document.getElementById('zone-performance-tbody');
+    if (tbody && venueData.zones) {
+        tbody.innerHTML = ''; // Clear existing rows
+        Object.entries(venueData.zones).forEach(([zoneName, zoneData]) => {
+            const efficiency = 100 - Math.round(zoneData.occupancy * 0.5 + zoneData.waitTime * 0.5);
+            const status = efficiency > 85 ? '✅ Good' : efficiency > 65 ? '⚠️ Moderate' : '🔴 High';
+            const efficiencyColor = efficiency > 85 ? '🟢' : efficiency > 65 ? '🟡' : '🔴';
+
+            const row = document.createElement('tr');
+            row.style.borderBottom = '1px solid #e0e0e0';
+            row.innerHTML = `
+                <td style="padding: 0.75rem;">${zoneName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</td>
+                <td style="text-align: center;">${zoneData.occupancy}%</td>
+                <td style="text-align: center;">${zoneData.waitTime} min</td>
+                <td style="text-align: center;">${status}</td>
+                <td style="text-align: center;">${efficiencyColor} ${efficiency}%</td>
+            `;
+            tbody.appendChild(row);
+        });
     }
 }
+
+
+// Personalized User Assistant
+function getRecommendation() {
+    if (!venueData || !venueData.zones) {
+        document.getElementById('recommendation').innerText = "Data not available. Please wait.";
+        return;
+    }
+
+    const goal = document.getElementById('userGoal').value;
+    let suggestion = "";
+
+    if (goal === "exit") {
+        suggestion = `For the fastest exit, please use the ${venueData.bestExit.replace('-', ' ')} gate.`;
+    } else if (goal === "food") {
+        const foodZone = Object.entries(venueData.zones).filter(([name, _]) => name.includes('food')).sort((a, b) => a[1].waitTime - b[1].waitTime)[0];
+        suggestion = `Head to the ${foodZone[0].replace('-', ' ')} - it currently has the lowest wait time of ${foodZone[1].waitTime} minutes.`;
+    } else if (goal === "restroom") {
+        const restroomZone = Object.entries(venueData.zones).filter(([name, _]) => name.includes('restroom')).sort((a, b) => a[1].waitTime - b[1].waitTime)[0];
+        suggestion = `The ${restroomZone[0].replace('-', ' ')}s have the shortest queue right now.`;
+    }
+
+    document.getElementById('recommendation').innerText = suggestion;
+    speakAlert(suggestion); // Voice feedback
+}
+
+// Voice Alert System
+function speakAlert(message) {
+    if ('speechSynthesis' in window) {
+        const speech = new SpeechSynthesisUtterance(message);
+        speech.volume = 1;
+        speech.rate = 1;
+        speech.pitch = 1;
+        window.speechSynthesis.speak(speech);
+    } else {
+        console.log("Speech synthesis not supported in this browser.");
+    }
+}
+
+// Override the main updateMetrics function to include the new performance page update
+const originalUpdateMetrics = updateMetrics;
+updateMetrics = function() {
+    originalUpdateMetrics();
+    updatePerformancePage();
+}
+// --- END INSANE LEVEL UPGRADES ---
 
 // Mobile optimization
 if (window.innerWidth < 768) {

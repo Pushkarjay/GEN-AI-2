@@ -235,92 +235,75 @@
             <!-- Performance Analytics -->
             <section id="performance" class="view">
                 <div class="header-section">
-                    <h2>📊 Performance Analytics</h2>
-                    <p>Real-time system metrics and predictive insights</p>
+                    <h2>� AI-Powered Performance & Insights</h2>
+                    <p>Predictive analytics, operational recommendations, and real-world signal integration.</p>
                 </div>
 
                 <div class="perf-grid">
+                    <!-- AI Prediction Card -->
+                    <div class="perf-card ai-card">
+                        <h3>🤖 AI Decision Engine</h3>
+                        <p id="aiInsight" class="ai-insight-text">System stable. Crowd flow is optimal.</p>
+                    </div>
+
+                    <!-- Crowd Prediction Card -->
                     <div class="perf-card">
-                        <h3>🎯 Current System Load</h3>
+                        <h3>📈 Crowd Forecast</h3>
                         <div class="large-metric">
-                            <div id="sysLoad" style="font-size: 2.5rem; font-weight: bold; color: #45b7d1;">62%</div>
-                            <p style="color: #666;">Venue at 62% capacity</p>
+                            <div id="predictedCrowd" style="font-size: 2.5rem; font-weight: bold; color: #45b7d1;">0</div>
+                            <p style="color: #666;">Predicted attendees in next 15 mins</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Smart Routing Card -->
+                    <div class="perf-card">
+                        <h3>🧭 Smart Exit Recommendation</h3>
+                        <div class="large-metric">
+                            <div id="bestExit" style="font-size: 2.5rem; font-weight: bold; color: #26de81;">-</div>
+                            <p style="color: #666;">Fastest exit route based on current data</p>
                         </div>
                     </div>
 
+                    <!-- Real-world Signals Card -->
                     <div class="perf-card">
-                        <h3>📈 Peak Hour Forecast</h3>
-                        <div style="padding: 1rem 0;">
-                            <div style="margin: 0.5rem 0;"><strong>Predicted Peak:</strong> 7:30 PM</div>
-                            <div style="margin: 0.5rem 0;"><strong>Expected Capacity:</strong> 89%</div>
-                            <div style="margin: 0.5rem 0;"><strong>Confidence:</strong> 94%</div>
+                        <h3>🌍 Real-World Signals</h3>
+                        <div id="realWorldSignals" class="signals-list">
+                            <div>Ticket Scans/min: <strong>0</strong></div>
+                            <div>CCTV Anomalies: <strong>0</strong></div>
+                            <div>Transport Load: <strong>0%</strong></div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="perf-card">
-                        <h3>⚡ System Health</h3>
-                        <div style="padding: 1rem 0;">
-                            <div>✅ API Response: <strong>45ms</strong></div>
-                            <div>✅ WebSocket Connected</div>
-                            <div>✅ All Sensors Active (5/5)</div>
-                            <div style="color: #4ecdc4;">Health Score: 98%</div>
-                        </div>
+                <!-- Personalized User Assistant -->
+                <div class="assistant-section">
+                    <h3>👤 Personalized Attendee Assistant</h3>
+                    <div class="assistant-controls">
+                        <select id="userGoal">
+                            <option value="exit">Find Fastest Exit</option>
+                            <option value="food">Find Quickest Food</option>
+                            <option value="restroom">Find Nearest Restroom</option>
+                        </select>
+                        <button onclick="getRecommendation()">Get My Recommendation</button>
                     </div>
-
-                    <div class="perf-card">
-                        <h3>🎯 Queue Optimization Score</h3>
-                        <div class="score-bar">
-                            <div id="optScore" style="width: 78%; background: linear-gradient(90deg, #26de81, #4ecdc4); height: 20px; border-radius: 10px;"></div>
-                        </div>
-                        <p id="optScoreText" style="margin-top: 0.5rem; color: #666;">78/100 - Good Efficiency</p>
-                    </div>
+                    <p id="recommendation" class="recommendation-text">Select a goal and get a personalized tip.</p>
                 </div>
 
                 <div class="analytics-table">
                     <h3>Zone Performance Summary</h3>
                     <table style="width: 100%; border-collapse: collapse;">
-                        <tr style="border-bottom: 2px solid #e0e0e0;">
-                            <th style="text-align: left; padding: 0.75rem;">Zone</th>
-                            <th style="text-align: center; padding: 0.75rem;">Occupancy</th>
-                            <th style="text-align: center; padding: 0.75rem;">Avg Wait</th>
-                            <th style="text-align: center; padding: 0.75rem;">Status</th>
-                            <th style="text-align: center; padding: 0.75rem;">Efficiency</th>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #e0e0e0;">
-                            <td style="padding: 0.75rem;">Entrance</td>
-                            <td style="text-align: center;">25%</td>
-                            <td style="text-align: center;">2 min</td>
-                            <td style="text-align: center;">✅ Good</td>
-                            <td style="text-align: center;">🟢 95%</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #e0e0e0;">
-                            <td style="padding: 0.75rem;">Main Arena</td>
-                            <td style="text-align: center;">68%</td>
-                            <td style="text-align: center;">18 min</td>
-                            <td style="text-align: center;">⚠️ Moderate</td>
-                            <td style="text-align: center;">🟡 82%</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #e0e0e0;">
-                            <td style="padding: 0.75rem;">Food Court</td>
-                            <td style="text-align: center;">85%</td>
-                            <td style="text-align: center;">42 min</td>
-                            <td style="text-align: center;">🔴 High</td>
-                            <td style="text-align: center;">🟡 65%</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #e0e0e0;">
-                            <td style="padding: 0.75rem;">Parking</td>
-                            <td style="text-align: center;">55%</td>
-                            <td style="text-align: center;">8 min</td>
-                            <td style="text-align: center;">✅ Good</td>
-                            <td style="text-align: center;">🟢 88%</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 0.75rem;">Restrooms</td>
-                            <td style="text-align: center;">32%</td>
-                            <td style="text-align: center;">5 min</td>
-                            <td style="text-align: center;">✅ Good</td>
-                            <td style="text-align: center;">🟢 92%</td>
-                        </tr>
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e0e0e0;">
+                                <th style="text-align: left; padding: 0.75rem;">Zone</th>
+                                <th style="text-align: center; padding: 0.75rem;">Occupancy</th>
+                                <th style="text-align: center; padding: 0.75rem;">Avg Wait</th>
+                                <th style="text-align: center; padding: 0.75rem;">Status</th>
+                                <th style="text-align: center; padding: 0.75rem;">Efficiency</th>
+                            </tr>
+                        </thead>
+                        <tbody id="zone-performance-tbody">
+                            <!-- Rows will be dynamically inserted by script.js -->
+                        </tbody>
                     </table>
                 </div>
             </section>
