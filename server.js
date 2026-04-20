@@ -115,6 +115,23 @@ const demoModes = {
 let currentMode = 'realtime'; // 'realtime', 'demo-peak', 'demo-low', 'demo-evacuation'
 let demoMode = null;
 
+// Map mode names to demo object keys
+const modeKeyMap = {
+    'demo-peak': 'peakHour',
+    'demo-low': 'lowOccupancy',
+    'demo-evacuation': 'emergencyEvacuation'
+};
+
+// Helper function to get data for current mode
+function getCurrentModeData() {
+    if (currentMode === 'realtime') {
+        return venueData;
+    } else {
+        const demoKey = modeKeyMap[currentMode];
+        return (demoKey && demoModes[demoKey]) ? demoModes[demoKey] : venueData;
+    }
+}
+
 // Function to update real-time data with realistic variations
 function updateRealtimeData() {
     venueData.timestamp = new Date();
@@ -163,13 +180,17 @@ app.get('/api/venue/data', (req, res) => {
     if (currentMode === 'realtime') {
         res.json(venueData);
     } else {
-        const mode = currentMode.replace('demo-', '');
-        res.json({
-            ...demoModes[mode],
-            timestamp: new Date(),
-            mode: 'demo',
-            demoType: mode
-        });
+        const demoKey = modeKeyMap[currentMode];
+        if (demoKey && demoModes[demoKey]) {
+            res.json({
+                ...demoModes[demoKey],
+                timestamp: new Date(),
+                mode: 'demo',
+                demoType: currentMode.replace('demo-', '')
+            });
+        } else {
+            res.json(venueData); // Fallback to realtime
+        }
     }
 });
 
@@ -184,12 +205,16 @@ app.get('/api/venue/zone/:zoneName', (req, res) => {
             res.status(404).json({ error: 'Zone not found' });
         }
     } else {
-        const mode = currentMode.replace('demo-', '');
-        const zone = demoModes[mode].zones[zoneName];
-        if (zone) {
-            res.json({ zone: zoneName, ...zone, timestamp: new Date(), mode: 'demo', demoType: mode });
+        const demoKey = modeKeyMap[currentMode];
+        if (demoKey && demoModes[demoKey]) {
+            const zone = demoModes[demoKey].zones[zoneName];
+            if (zone) {
+                res.json({ zone: zoneName, ...zone, timestamp: new Date(), mode: 'demo', demoType: currentMode.replace('demo-', '') });
+            } else {
+                res.status(404).json({ error: 'Zone not found' });
+            }
         } else {
-            res.status(404).json({ error: 'Zone not found' });
+            res.status(400).json({ error: 'Invalid demo mode' });
         }
     }
 });
@@ -204,15 +229,19 @@ app.get('/api/venue/zones', (req, res) => {
             maxCapacity: venueData.maxCapacity
         });
     } else {
-        const mode = currentMode.replace('demo-', '');
-        res.json({
-            zones: demoModes[mode].zones,
-            timestamp: new Date(),
-            totalAttendees: demoModes[mode].totalAttendees,
-            maxCapacity: demoModes[mode].maxCapacity,
-            mode: 'demo',
-            demoType: mode
-        });
+        const demoKey = modeKeyMap[currentMode];
+        if (demoKey && demoModes[demoKey]) {
+            res.json({
+                zones: demoModes[demoKey].zones,
+                timestamp: new Date(),
+                totalAttendees: demoModes[demoKey].totalAttendees,
+                maxCapacity: demoModes[demoKey].maxCapacity,
+                mode: 'demo',
+                demoType: currentMode.replace('demo-', '')
+            });
+        } else {
+            res.status(400).json({ error: 'Invalid demo mode' });
+        }
     }
 });
 
@@ -261,7 +290,7 @@ wss.on('connection', (ws) => {
     // Send initial data
     ws.send(JSON.stringify({
         type: 'initial',
-        data: currentMode === 'realtime' ? venueData : demoModes[currentMode.replace('demo-', '')],
+        data: getCurrentModeData(),
         mode: currentMode
     }));
 
@@ -271,7 +300,7 @@ wss.on('connection', (ws) => {
             updateRealtimeData();
         }
         
-        const dataToSend = currentMode === 'realtime' ? venueData : demoModes[currentMode.replace('demo-', '')];
+        const dataToSend = getCurrentModeData();
         
         ws.send(JSON.stringify({
             type: 'update',
@@ -289,7 +318,7 @@ wss.on('connection', (ws) => {
                 ws.send(JSON.stringify({
                     type: 'modeChanged',
                     currentMode: currentMode,
-                    data: currentMode === 'realtime' ? venueData : demoModes[currentMode.replace('demo-', '')]
+                    data: getCurrentModeData()
                 }));
             }
         } catch (err) {
