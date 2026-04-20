@@ -1,6 +1,6 @@
 {
   "name": "venueflow",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Smart crowd management system for large-scale sporting venues with real-time API and WebSocket support",
   "main": "server.js",
   "scripts": {
