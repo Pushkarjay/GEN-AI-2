@@ -148,6 +148,160 @@ function updateRealtimeData() {
         const occupancyChange = Math.floor(Math.random() * 6 - 2);
         zoneData.occupancy = Math.max(0, Math.min(100, zoneData.occupancy + occupancyChange));
 
+        // Wait time based on occupancy
+        const waitChange = Math.round((zoneData.occupancy / 10) + (Math.random() * 4 - 2));
+        zoneData.waitTime = Math.max(0, Math.min(120, zoneData.waitTime + waitChange));
+
+        // Crowd level
+        if (zoneData.occupancy > 80) zoneData.crowd = 'High';
+        else if (zoneData.occupancy > 50) zoneData.crowd = 'Medium';
+        else zoneData.crowd = 'Low';
+    });
+
+    // Update average wait time
+    const totalWaitTime = Object.values(venueData.zones).reduce((acc, zone) => acc + zone.waitTime, 0);
+    venueData.avgWaitTime = Math.round(totalWaitTime / Object.keys(venueData.zones).length);
+}
+
+// --- INSANE LEVEL UPGRADES ---
+
+// 1. AI Crowd Prediction
+function predictCrowd(current, zones) {
+    const growthFactor = 1 + (Math.random() * 0.1 - 0.05); // Simulate trend +/- 5%
+    const zonePressure = Object.values(zones).reduce((acc, z) => acc + z.occupancy, 0) / (Object.keys(zones).length * 100); // Avg occupancy
+    let predicted = Math.round(current * growthFactor * (1 + zonePressure * 0.1));
+    return Math.min(venueData.maxCapacity, predicted); // Cap at max capacity
+}
+
+// 2. AI Decision Engine
+function generateInsight(data) {
+    if (data.events.some(e => e.severity === 'high')) {
+        return "High-severity event detected! Prioritize immediate response.";
+    }
+    if (data.predicted > data.totalAttendees * 1.15) {
+        return "Significant crowd surge expected. Alert staff and prepare for increased flow.";
+    }
+    if (data.avgWaitTime > 20) {
+        return "High average wait times. Redirect patrons from congested zones.";
+    }
+    const highOccupancyZones = Object.entries(data.zones).filter(([_, z]) => z.occupancy > 85);
+    if (highOccupancyZones.length > 1) {
+        return `Multiple zones (${highOccupancyZones.map(z => z[0]).join(', ')}) are nearing capacity. Proactive crowd management required.`;
+    }
+    return "System stable. Crowd flow is optimal.";
+}
+
+// 3. Smart Exit Routing
+function getBestExit(zones) {
+    // Find the exit zone with the lowest combination of occupancy and wait time
+    const exitZones = ['entrance', 'parking']; // Assuming these are the primary exits
+    return exitZones.map(zone => ({
+        name: zone,
+        score: zones[zone].occupancy + (zones[zone].waitTime / 5) // Weight occupancy higher
+    })).sort((a, b) => a.score - b.score)[0].name;
+}
+
+// 4. Real-World Integration Simulation
+function simulateRealWorldSignals() {
+    return {
+        ticketScansPerMin: Math.floor(Math.random() * 100) + 20,
+        cctvAnomalies: Math.random() > 0.95 ? 1 : 0, // 5% chance of an anomaly
+        publicTransportLoad: Math.floor(Math.random() * 40) + 50, // 50-90%
+    };
+}
+
+// --- END INSANE LEVEL UPGRADES ---
+
+// API Endpoints
+app.get('/api/mode', (req, res) => {
+    res.json({ mode: currentMode });
+});
+
+app.post('/api/mode', (req, res) => {
+    const { mode } = req.body;
+    if (['realtime', 'demo-peak', 'demo-low', 'demo-evacuation'].includes(mode)) {
+        currentMode = mode;
+        console.log(`Switched to ${mode} mode`);
+        broadcast(JSON.stringify({ type: 'modeChange', mode: currentMode }));
+        res.status(200).json({ message: `Mode switched to ${mode}` });
+    } else {
+        res.status(400).json({ error: 'Invalid mode' });
+    }
+});
+
+app.get('/api/venue-data', (req, res) => {
+    let data = getCurrentModeData();
+    
+    // If in realtime, add the insane upgrades
+    if (currentMode === 'realtime') {
+        data = {
+            ...data,
+            predicted: predictCrowd(data.totalAttendees, data.zones),
+            insight: generateInsight(data),
+            bestExit: getBestExit(data.zones),
+            signals: simulateRealWorldSignals()
+        };
+    }
+
+    res.json(data);
+});
+
+// WebSocket Logic
+function broadcast(data) {
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(data);
+        }
+    });
+}
+
+setInterval(() => {
+    if (currentMode === 'realtime') {
+        updateRealtimeData();
+    }
+    
+    let data = getCurrentModeData();
+
+    // Add insane upgrades for broadcasting too
+    if (currentMode === 'realtime') {
+        data = {
+            ...data,
+            predicted: predictCrowd(data.totalAttendees, data.zones),
+            insight: generateInsight(data),
+            bestExit: getBestExit(data.zones),
+            signals: simulateRealWorldSignals()
+        };
+    }
+    
+    broadcast(JSON.stringify({ type: 'venueDataUpdate', data }));
+}, 3000);
+
+wss.on('connection', ws => {
+    console.log('Client connected');
+    let initialData = getCurrentModeData();
+    if (currentMode === 'realtime') {
+        initialData = {
+            ...initialData,
+            predicted: predictCrowd(initialData.totalAttendees, initialData.zones),
+            insight: generateInsight(initialData),
+            bestExit: getBestExit(initialData.zones),
+            signals: simulateRealWorldSignals()
+        };
+    }
+    ws.send(JSON.stringify({ type: 'initialData', data: initialData, mode: currentMode }));
+    ws.on('close', () => console.log('Client disconnected'));
+});
+
+// Serve the main HTML file
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+
         // Update crowd level
         if (zoneData.occupancy < 40) {
             zoneData.crowd = 'Low';
