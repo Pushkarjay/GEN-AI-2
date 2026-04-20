@@ -55,6 +55,8 @@ function connectWebSocket() {
                     updateMetrics();
                     updateZoneDisplays();
                     updateQueueDisplays();
+                    updateZoneAnalytics();
+                    updateAlerts();
                     updateTimeInfo();
                 }
             } catch (err) {
@@ -128,6 +130,8 @@ async function changeMode(mode) {
             updateMetrics();
             updateZoneDisplays();
             updateQueueDisplays();
+            updateZoneAnalytics();
+            updateAlerts();
             
             showNotification(`Switched to ${getModeLabel(mode)}`, 'success');
 
@@ -209,6 +213,12 @@ function updateMetrics() {
     
     // Update queue management page
     updateQueueDisplays();
+    
+    // Update zone analytics page
+    updateZoneAnalytics();
+    
+    // Update alerts page
+    updateAlerts();
 }
 
 // Update zone displays
@@ -297,6 +307,8 @@ async function optimizeQueues() {
             venueData.avgWaitTime = Math.round(waitTimes.reduce((a, b) => a + b) / waitTimes.length);
 
             updateMetrics();
+            updateZoneAnalytics();
+            updateAlerts();
         }
         
         showNotification('✓ Queue optimization applied successfully!', 'success');
@@ -308,9 +320,21 @@ async function optimizeQueues() {
 
 // Clear all alerts
 function clearAllAlerts() {
-    document.querySelectorAll('.alert').forEach(alert => {
-        alert.style.display = 'none';
-    });
+    const alertsList = document.getElementById('alerts-list');
+    if (alertsList) {
+        alertsList.innerHTML = '';
+        // Add info message
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'alert alert-info';
+        infoDiv.innerHTML = `
+            <div class="alert-icon">ℹ️</div>
+            <div class="alert-content">
+                <strong>All Alerts Cleared</strong>
+                <p>System monitoring resumed. New alerts will appear if issues are detected.</p>
+            </div>
+        `;
+        alertsList.appendChild(infoDiv);
+    }
     showNotification('All alerts cleared', 'info');
 }
 
@@ -359,6 +383,165 @@ function updateQueueDisplays() {
         document.getElementById('parking-progress').style.width = parking.occupancy + '%';
         document.getElementById('parking-status').textContent = parking.occupancy > 80 ? '🔴 Use alternate lot' : 'Alternate exit route available';
     }
+}
+
+// Update Zone Analytics page with dynamic data
+function updateZoneAnalytics() {
+    if (!venueData || !venueData.zones) return;
+
+    const zones = venueData.zones;
+    
+    // Update density chart bars
+    const zoneNames = [
+        { key: 'entrance', barId: 'entrance-bar', valueId: 'entrance-value' },
+        { key: 'main-arena', barId: 'arena-bar', valueId: 'arena-value' },
+        { key: 'food-court', barId: 'food-bar', valueId: 'food-value' },
+        { key: 'parking', barId: 'parking-bar', valueId: 'parking-value' }
+    ];
+
+    zoneNames.forEach(zone => {
+        if (zones[zone.key]) {
+            const occupancy = zones[zone.key].occupancy;
+            const barColor = occupancy > 85 ? '#FF5722' : occupancy > 60 ? '#FFC107' : '#4CAF50';
+            
+            const bar = document.getElementById(zone.barId);
+            const value = document.getElementById(zone.valueId);
+            
+            if (bar) {
+                bar.style.width = occupancy + '%';
+                bar.style.background = barColor;
+            }
+            if (value) {
+                value.textContent = occupancy + '%';
+            }
+        }
+    });
+
+    // Update flow statistics based on total occupancy
+    const totalOccupancy = Object.values(zones).reduce((sum, z) => sum + z.occupancy, 0) / 4;
+    const entriesPerMin = Math.round((100 - totalOccupancy) * 0.8); // More entries when less crowded
+    const exitsPerMin = Math.round((totalOccupancy / 100) * 25); // More exits when crowded
+    const netFlow = entriesPerMin - exitsPerMin;
+
+    const flowEntries = document.getElementById('flow-entries');
+    const flowExits = document.getElementById('flow-exits');
+    const flowNet = document.getElementById('flow-net');
+
+    if (flowEntries) flowEntries.textContent = entriesPerMin + ' people';
+    if (flowExits) flowExits.textContent = exitsPerMin + ' people';
+    if (flowNet) flowNet.textContent = (netFlow > 0 ? '+' : '') + netFlow + ' people/min';
+}
+
+// Generate dynamic alerts based on mode and occupancy
+function updateAlerts() {
+    if (!venueData || !venueData.zones) return;
+
+    const alertsList = document.getElementById('alerts-list');
+    if (!alertsList) return;
+
+    alertsList.innerHTML = ''; // Clear existing alerts
+    const alerts = [];
+    const zones = venueData.zones;
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    // Generate alerts based on occupancy thresholds
+    Object.keys(zones).forEach(zoneName => {
+        const zone = zones[zoneName];
+        const displayName = zoneName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+        if (zone.occupancy > 90) {
+            alerts.push({
+                type: 'critical',
+                icon: '🔴',
+                title: `${displayName} - CRITICAL CAPACITY`,
+                message: `Zone at ${zone.occupancy}% capacity. IMMEDIATE ACTION REQUIRED. Restrict entries and reroute traffic.`,
+                priority: 1
+            });
+        } else if (zone.occupancy > 75) {
+            alerts.push({
+                type: 'warning',
+                icon: '⚠️',
+                title: `${displayName} - Near Capacity`,
+                message: `Zone at ${zone.occupancy}% capacity. ${zone.waitTime} min wait time. Consider opening additional services.`,
+                priority: 2
+            });
+        } else if (zone.occupancy > 50 && zone.waitTime > 20) {
+            alerts.push({
+                type: 'warning',
+                icon: '⚠️',
+                title: `${displayName} - High Wait Time`,
+                message: `Wait time: ${zone.waitTime} minutes. Recommend staff reallocation.`,
+                priority: 3
+            });
+        } else if (zone.incidents && zone.incidents > 0) {
+            alerts.push({
+                type: 'warning',
+                icon: '⚠️',
+                title: `${displayName} - Incidents Reported`,
+                message: `${zone.incidents} incident(s) reported in this zone.`,
+                priority: 4
+            });
+        }
+    });
+
+    // Add mode-specific alerts
+    const currentMode = document.getElementById('modeSelector')?.value || 'realtime';
+    if (currentMode.includes('evacuation')) {
+        alerts.unshift({
+            type: 'critical',
+            icon: '🚨',
+            title: 'EMERGENCY EVACUATION',
+            message: 'Evacuation mode activated. All staff assist with orderly exit.',
+            priority: 0
+        });
+    } else if (currentMode.includes('peak')) {
+        alerts.unshift({
+            type: 'warning',
+            icon: '📊',
+            title: 'Peak Hour Operations',
+            message: 'Venue operating at peak capacity. All services at maximum throughput.',
+            priority: 1
+        });
+    } else if (currentMode.includes('low')) {
+        if (alerts.length === 0) {
+            alerts.push({
+                type: 'success',
+                icon: '✓',
+                title: 'Normal Operations',
+                message: 'All zones operating normally. No issues detected.',
+                priority: 5
+            });
+        }
+    } else {
+        // Realtime mode - only show if there are issues
+        if (alerts.length === 0) {
+            alerts.push({
+                type: 'info',
+                icon: 'ℹ️',
+                title: 'System Status',
+                message: 'All systems operational. Real-time monitoring active.',
+                priority: 5
+            });
+        }
+    }
+
+    // Sort by priority and render
+    alerts.sort((a, b) => a.priority - b.priority);
+    alerts.slice(0, 6).forEach(alert => {
+        const alertDiv = document.createElement('div');
+        const typeClass = alert.type === 'critical' ? 'alert-warning' : alert.type === 'success' ? 'alert-success' : alert.type === 'info' ? 'alert-info' : 'alert-warning';
+        alertDiv.className = `alert ${typeClass}`;
+        alertDiv.innerHTML = `
+            <div class="alert-icon">${alert.icon}</div>
+            <div class="alert-content">
+                <strong>${alert.title}</strong>
+                <p>${alert.message}</p>
+                <small>${timestamp}</small>
+            </div>
+            <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
+        `;
+        alertsList.appendChild(alertDiv);
+    });
 }
 
 // Show notification
