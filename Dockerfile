@@ -1,7 +1,8 @@
 FROM node:18-alpine
 
-# Build timestamp: 2026-04-20T21:00:00Z
-ENV BUILD_TIMESTAMP="2026-04-20T21:00:00Z"
+# Build timestamp: 2026-04-20T21:25:00Z
+ENV BUILD_TIMESTAMP="2026-04-20T21:25:00Z"
+ENV VERSION="3.2.0"
 
 # Set working directory
 WORKDIR /app
