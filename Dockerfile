@@ -1,8 +1,8 @@
 FROM node:18-alpine
 
-# Build timestamp: 2026-04-20T21:25:00Z
-ENV BUILD_TIMESTAMP="2026-04-20T21:25:00Z"
-ENV VERSION="3.2.0"
+# Build timestamp: 2026-04-20T21:35:00Z
+ENV BUILD_TIMESTAMP="2026-04-20T21:35:00Z"
+ENV VERSION="3.2.0-final"
 
 # Set working directory
 WORKDIR /app
@@ -26,3 +26,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Start application
 CMD ["npm", "start"]
 
+CMD ["npm", "start"]
