@@ -4,27 +4,17 @@
 let venueData = {};
 let ws = null;
 let connectionStatus = 'disconnected';
-const API_BASE_URL = typeof window !== 'undefined' && window.location.origin.includes('localhost') ? 'http://localhost:8080' : window.location.origin;
-const WS_URL = API_BASE_URL.replace(/http(s?):/, 'ws$1:');
+const API_BASE_URL = typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'http://localhost:8080';
+const WS_URL = (API_BASE_URL.replace('http', 'ws')).replace(':3000', ':8080');
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    // Set the active button on page load
-    const initialView = 'dashboard';
-    document.querySelector(`.nav-btn[onclick="switchView('${initialView}')"]`).classList.add('active');
-    
     updateTimeInfo();
-    setInterval(updateTimeInfo, 1000); // Update time every second
-
-    // Connect and fetch initial data
+    // Ensure we start in realtime mode
+    document.getElementById('modeSelector').value = 'realtime';
+    changeMode('realtime');
     connectWebSocket();
     startPollingFallback();
-
-    // Set default mode and fetch data for it
-    const modeSelector = document.getElementById('modeSelector');
-    if (modeSelector) {
-        changeMode(modeSelector.value);
-    }
 });
 
 // Update time display
@@ -60,14 +50,15 @@ function connectWebSocket() {
         ws.onmessage = (event) => {
             try {
                 const message = JSON.parse(event.data);
-                
-                if (message.type === 'initialData' || message.type === 'venueDataUpdate') {
+                if (message.type === 'initial' || message.type === 'update') {
                     venueData = message.data;
-                    updateAllPages();
-                } else if (message.type === 'modeChange') {
-                    showNotification(`Switched to ${getModeLabel(message.mode)}`, 'success');
+                    updateMetrics();
+                    updateZoneDisplays();
+                    updateQueueDisplays();
+                    updateZoneAnalytics();
+                    updateAlerts();
+                    updateTimeInfo();
                 }
-
             } catch (err) {
                 console.error('WebSocket message parse error:', err);
             }
@@ -105,31 +96,18 @@ function startPollingFallback() {
 // Fetch venue data from API
 async function fetchVenueData() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/venue-data`);
+        const response = await fetch(`${API_BASE_URL}/api/venue/data`);
         if (response.ok) {
             venueData = await response.json();
-            updateAllPages();
+            updateMetrics();
             if (connectionStatus === 'disconnected') {
                 updateConnectionStatus('connected');
-                showNotification('Connection restored via polling.', 'info');
             }
-        } else {
-            throw new Error(`API request failed with status ${response.status}`);
         }
     } catch (err) {
         console.error('Failed to fetch venue data:', err);
         updateConnectionStatus('disconnected');
     }
-}
-
-// A new function to update all visible data at once
-function updateAllPages() {
-    if (!venueData) return;
-    updateMetrics();
-    updateZoneDisplays();
-    updateQueueDisplays();
-    updateZoneAnalytics();
-    updateAlerts();
 }
 
 // Change mode (realtime vs demo)
@@ -142,15 +120,29 @@ async function changeMode(mode) {
         });
 
         if (response.ok) {
-            // The backend will broadcast the change, so we just fetch the latest data
+            const result = await response.json();
+            console.log('Mode changed to:', result.currentMode);
+            
+            // Fetch fresh data for new mode
             await fetchVenueData();
-            showNotification(`Switching to ${getModeLabel(mode)}...`, 'info');
-        } else {
-            throw new Error(`Failed to switch mode with status ${response.status}`);
+            
+            // Refresh ALL page data
+            updateMetrics();
+            updateZoneDisplays();
+            updateQueueDisplays();
+            updateZoneAnalytics();
+            updateAlerts();
+            
+            showNotification(`Switched to ${getModeLabel(mode)}`, 'success');
+
+            // Send mode change through WebSocket if connected
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'modeChange', mode }));
+            }
         }
     } catch (err) {
         console.error('Failed to change mode:', err);
-        showNotification('Error switching mode.', 'error');
+        showNotification('Failed to change mode', 'error');
     }
 }
 
@@ -236,22 +228,20 @@ function updateZoneDisplays() {
     Object.keys(venueData.zones).forEach(zone => {
         const data = venueData.zones[zone];
         const crowdElement = document.getElementById(`${zone}-crowd`);
-        
-        if (crowdElement) {
-            crowdElement.textContent = data.crowd;
-            // Reset color
-            crowdElement.style.color = '';
-            // Remove old classes
-            crowdElement.classList.remove('crowd-high', 'crowd-medium', 'crowd-low');
+        const densityElement = document.getElementById(`${zone}-density`);
 
-            // Add new class based on crowd level
-            if (data.crowd === 'High') {
-                crowdElement.classList.add('crowd-high');
-            } else if (data.crowd === 'Medium') {
-                crowdElement.classList.add('crowd-medium');
-            } else {
-                crowdElement.classList.add('crowd-low');
-            }
+        if (crowdElement) crowdElement.textContent = data.crowd;
+        if (densityElement) {
+            densityElement.style.width = data.occupancy + '%';
+        }
+
+        // Color density indicator
+        if (data.occupancy > 80) {
+            if (crowdElement) crowdElement.style.color = '#ea4335';
+        } else if (data.occupancy > 60) {
+            if (crowdElement) crowdElement.style.color = '#fbbc04';
+        } else {
+            if (crowdElement) crowdElement.style.color = '#34a853';
         }
     });
 }
@@ -259,10 +249,22 @@ function updateZoneDisplays() {
 // Select zone for details
 function selectZone(zone) {
     if (!venueData.zones || !venueData.zones[zone]) return;
-    
-    // This function seems to be for a details view that is not in the final HTML.
-    // If it were, we would update it here. For now, it does nothing.
-    console.log(`Zone selected: ${zone}`, venueData.zones[zone]);
+
+    const data = venueData.zones[zone];
+    document.getElementById('zoneDetails').style.display = 'block';
+    document.getElementById('selectedZoneTitle').textContent = `${zone.replace('-', ' ').toUpperCase()} - Zone Details`;
+    document.getElementById('zoneOccupancy').textContent = data.occupancy + '%';
+    document.getElementById('zoneWaitTime').textContent = data.waitTime + ' min';
+    document.getElementById('zoneIncidents').textContent = data.incidents || 0;
+    document.getElementById('zoneEntries').textContent = data.entries || 1;
+
+    // Highlight selected zone
+    document.querySelectorAll('.zone-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('selected');
+    }
 }
 
 // Switch between views
@@ -278,39 +280,63 @@ function switchView(viewName) {
     });
 
     // Show selected view
-    const activeView = document.getElementById(viewName);
-    if (activeView) {
-        activeView.classList.add('active');
-    }
+    document.getElementById(viewName).classList.add('active');
 
     // Add active class to clicked button
-    const activeButton = document.querySelector(`.nav-btn[onclick="switchView('${viewName}')"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
     }
 
-    // Refresh data for all views, as data might have updated
-    updateAllPages();
+    // Refresh data for the selected view
+    if (venueData && venueData.zones) {
+        if (viewName === 'queues') {
+            updateQueueDisplays();
+        } else if (viewName === 'zones') {
+            updateZoneAnalytics();
+        } else if (viewName === 'alerts') {
+            updateAlerts();
+        } else if (viewName === 'dashboard') {
+            updateMetrics();
+        }
+    }
 }
 
 // Optimize queues
 async function optimizeQueues() {
-    showNotification('Simulating queue optimization...', 'info');
-    // This is a mock function for the demo.
-    // In a real system, this would trigger a backend process.
-    setTimeout(() => {
-        showNotification('✓ Queue optimization simulation complete!', 'success');
-    }, 1500);
+    try {
+        // In real-time mode, make API call to optimize
+        if (document.getElementById('modeSelector').value === 'realtime') {
+            // Simulate optimization by reducing occupancy
+            const zones = venueData.zones;
+            Object.keys(zones).forEach(zone => {
+                if (zones[zone].occupancy > 70) {
+                    zones[zone].occupancy = Math.max(zones[zone].occupancy - 10, 0);
+                    zones[zone].waitTime = Math.round(zones[zone].occupancy / 2.5);
+                }
+            });
+
+            // Recalculate average wait time
+            const waitTimes = Object.values(zones).map(z => z.waitTime);
+            venueData.avgWaitTime = Math.round(waitTimes.reduce((a, b) => a + b) / waitTimes.length);
+
+            updateMetrics();
+            updateZoneAnalytics();
+            updateAlerts();
+        }
+        
+        showNotification('✓ Queue optimization applied successfully!', 'success');
+    } catch (err) {
+        console.error('Queue optimization failed:', err);
+        showNotification('Failed to optimize queues', 'error');
+    }
 }
 
 // Clear all alerts
 function clearAllAlerts() {
-    if (venueData && venueData.events) {
-        venueData.events = []; // Clear events locally
-    }
     const alertsList = document.getElementById('alerts-list');
     if (alertsList) {
         alertsList.innerHTML = '';
+        // Add info message
         const infoDiv = document.createElement('div');
         infoDiv.className = 'alert alert-info';
         infoDiv.innerHTML = `
@@ -329,36 +355,47 @@ function clearAllAlerts() {
 function updateQueueDisplays() {
     if (!venueData || !venueData.zones) return;
 
-    const updateQueueCard = (zoneName, cardPrefix) => {
-        const zone = venueData.zones[zoneName];
-        if (!zone) return;
+    // Calculate queue sizes from zone occupancy
+    const entrance = venueData.zones.entrance;
+    const foodCourt = venueData.zones['food-court'];
+    const restrooms = venueData.zones.restrooms;
+    const parking = venueData.zones.parking;
 
-        const queueElem = document.getElementById(`${cardPrefix}-queue`);
-        const waitElem = document.getElementById(`${cardPrefix}-wait`);
-        const progressElem = document.getElementById(`${cardPrefix}-progress`);
-        const statusElem = document.getElementById(`${cardPrefix}-status`);
+    // Gates Queue (based on entrance occupancy)
+    if (entrance && document.getElementById('gates-queue')) {
+        const gatesQueue = Math.round((entrance.occupancy / 100) * 300);
+        const gatesWait = Math.round((entrance.occupancy / 3));
+        document.getElementById('gates-queue').textContent = `Queue: ${gatesQueue} people | Wait: ${gatesWait} min`;
+        document.getElementById('gates-progress').style.width = entrance.occupancy + '%';
+        document.getElementById('gates-status').textContent = entrance.occupancy > 80 ? '⚠️ All gates open - near capacity' : 'Gate 1-3: Open | Gate 4: On-call';
+    }
 
-        if (queueElem) queueElem.textContent = Math.round((zone.occupancy / 100) * (zone.maxCapacity / 10));
-        if (waitElem) waitElem.textContent = zone.waitTime;
-        if (progressElem) progressElem.style.width = zone.occupancy + '%';
-        if (statusElem) {
-            if (zone.occupancy > 85) {
-                statusElem.textContent = 'CRITICAL - Reroute traffic';
-                progressElem.style.backgroundColor = '#ea4335';
-            } else if (zone.occupancy > 60) {
-                statusElem.textContent = 'High - Monitor closely';
-                progressElem.style.backgroundColor = '#fbbc04';
-            } else {
-                statusElem.textContent = 'Normal';
-                progressElem.style.backgroundColor = '#34a853';
-            }
-        }
-    };
+    // Food Court Queue (based on food court occupancy)
+    if (foodCourt && document.getElementById('food-queue')) {
+        const foodQueue = Math.round((foodCourt.occupancy / 100) * 400);
+        const foodWait = foodCourt.waitTime;
+        document.getElementById('food-queue').textContent = `Queue: ${foodQueue} people | Wait: ${foodWait} min`;
+        document.getElementById('food-progress').style.width = foodCourt.occupancy + '%';
+        document.getElementById('food-status').innerHTML = foodCourt.occupancy > 85 ? '🔴 CRITICAL - Open all counters' : '✓ Normal operations';
+    }
 
-    updateQueueCard('entrance', 'gates');
-    updateQueueCard('food-court', 'food');
-    updateQueueCard('restrooms', 'restroom');
-    updateQueueCard('parking', 'parking');
+    // Restroom Queue (based on restroom occupancy)
+    if (restrooms && document.getElementById('restroom-queue')) {
+        const restroomQueue = Math.round((restrooms.occupancy / 100) * 100);
+        const restroomWait = restrooms.waitTime;
+        document.getElementById('restroom-queue').textContent = `Queue: ${restroomQueue} people | Wait: ${restroomWait} min`;
+        document.getElementById('restroom-progress').style.width = restrooms.occupancy + '%';
+        document.getElementById('restroom-status').textContent = restrooms.occupancy > 70 ? '⚠️ Consider alternate facilities' : '✓ All facilities operational';
+    }
+
+    // Parking Queue (based on parking occupancy)
+    if (parking && document.getElementById('parking-queue')) {
+        const parkingQueue = Math.round((parking.occupancy / 100) * 250);
+        const parkingWait = parking.waitTime;
+        document.getElementById('parking-queue').textContent = `Queue: ${parkingQueue} cars | Wait: ${parkingWait} min`;
+        document.getElementById('parking-progress').style.width = parking.occupancy + '%';
+        document.getElementById('parking-status').textContent = parking.occupancy > 80 ? '🔴 Use alternate lot' : 'Alternate exit route available';
+    }
 }
 
 // Update Zone Analytics page with dynamic data
@@ -375,13 +412,13 @@ function updateZoneAnalytics() {
         { key: 'parking', barId: 'parking-bar', valueId: 'parking-value' }
     ];
 
-    zoneNames.forEach(zoneInfo => {
-        if (zones[zoneInfo.key]) {
-            const occupancy = zones[zoneInfo.key].occupancy;
-            const barColor = occupancy > 85 ? '#ea4335' : occupancy > 60 ? '#fbbc04' : '#34a853';
+    zoneNames.forEach(zone => {
+        if (zones[zone.key]) {
+            const occupancy = zones[zone.key].occupancy;
+            const barColor = occupancy > 85 ? '#FF5722' : occupancy > 60 ? '#FFC107' : '#4CAF50';
             
-            const bar = document.getElementById(zoneInfo.barId);
-            const value = document.getElementById(zoneInfo.valueId);
+            const bar = document.getElementById(zone.barId);
+            const value = document.getElementById(zone.valueId);
             
             if (bar) {
                 bar.style.width = occupancy + '%';
@@ -393,99 +430,158 @@ function updateZoneAnalytics() {
         }
     });
 
-    // Update flow statistics
-    const totalAttendees = venueData.totalAttendees || 0;
-    const entriesPerMin = Math.round(totalAttendees * (Math.random() * 0.01 + 0.005));
-    const exitsPerMin = Math.round(totalAttendees * (Math.random() * 0.005 + 0.002));
+    // Update flow statistics based on total occupancy
+    const totalOccupancy = Object.values(zones).reduce((sum, z) => sum + z.occupancy, 0) / 4;
+    const entriesPerMin = Math.round((100 - totalOccupancy) * 0.8); // More entries when less crowded
+    const exitsPerMin = Math.round((totalOccupancy / 100) * 25); // More exits when crowded
     const netFlow = entriesPerMin - exitsPerMin;
 
     const flowEntries = document.getElementById('flow-entries');
     const flowExits = document.getElementById('flow-exits');
     const flowNet = document.getElementById('flow-net');
 
-    if (flowEntries) flowEntries.textContent = entriesPerMin;
-    if (flowExits) flowExits.textContent = exitsPerMin;
-    if (flowNet) {
-        flowNet.textContent = (netFlow > 0 ? '+' : '') + netFlow;
-        flowNet.parentElement.className = netFlow > 0 ? 'stat-box positive' : 'stat-box negative';
-    }
+    if (flowEntries) flowEntries.textContent = entriesPerMin + ' people';
+    if (flowExits) flowExits.textContent = exitsPerMin + ' people';
+    if (flowNet) flowNet.textContent = (netFlow > 0 ? '+' : '') + netFlow + ' people/min';
 }
 
 // Generate dynamic alerts based on mode and occupancy
 function updateAlerts() {
-    if (!venueData) return;
+    if (!venueData || !venueData.zones) return;
 
     const alertsList = document.getElementById('alerts-list');
     if (!alertsList) return;
 
     alertsList.innerHTML = ''; // Clear existing alerts
-    const alerts = venueData.events || [];
+    const alerts = [];
+    const zones = venueData.zones;
     const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-    // Add alerts for high occupancy zones not already in events
-    Object.entries(venueData.zones).forEach(([zoneName, zoneData]) => {
-        if (zoneData.occupancy > 90 && !alerts.some(a => a.zone === zoneName && a.type === 'overcrowding')) {
-            alerts.unshift({
-                id: Date.now(),
-                zone: zoneName,
-                type: 'overcrowding',
-                severity: 'high',
-                timestamp: new Date(),
-                message: `Zone at ${zoneData.occupancy}% capacity. IMMEDIATE ACTION REQUIRED.`
+    // Generate alerts based on occupancy thresholds
+    Object.keys(zones).forEach(zoneName => {
+        const zone = zones[zoneName];
+        const displayName = zoneName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+        if (zone.occupancy > 90) {
+            alerts.push({
+                type: 'critical',
+                icon: '🔴',
+                title: `${displayName} - CRITICAL CAPACITY`,
+                message: `Zone at ${zone.occupancy}% capacity. IMMEDIATE ACTION REQUIRED. Restrict entries and reroute traffic.`,
+                priority: 1
+            });
+        } else if (zone.occupancy > 75) {
+            alerts.push({
+                type: 'warning',
+                icon: '⚠️',
+                title: `${displayName} - Near Capacity`,
+                message: `Zone at ${zone.occupancy}% capacity. ${zone.waitTime} min wait time. Consider opening additional services.`,
+                priority: 2
+            });
+        } else if (zone.occupancy > 50 && zone.waitTime > 20) {
+            alerts.push({
+                type: 'warning',
+                icon: '⚠️',
+                title: `${displayName} - High Wait Time`,
+                message: `Wait time: ${zone.waitTime} minutes. Recommend staff reallocation.`,
+                priority: 3
+            });
+        } else if (zone.incidents && zone.incidents > 0) {
+            alerts.push({
+                type: 'warning',
+                icon: '⚠️',
+                title: `${displayName} - Incidents Reported`,
+                message: `${zone.incidents} incident(s) reported in this zone.`,
+                priority: 4
             });
         }
     });
 
-    // Sort alerts by timestamp (newest first)
-    alerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    // Display alerts
-    if (alerts.length > 0) {
-        alerts.forEach(alert => {
-            const alertDiv = document.createElement('div');
-            const alertType = alert.severity === 'high' ? 'critical' : 'warning';
-            alertDiv.className = `alert alert-${alertType}`;
-            alertDiv.innerHTML = `
-                <div class="alert-icon">${alertType === 'critical' ? '🔴' : '⚠️'}</div>
-                <div class="alert-content">
-                    <strong>${alert.type.toUpperCase()} in ${alert.zone.replace('-', ' ')}</strong>
-                    <p>${alert.message}</p>
-                </div>
-                <div class="alert-timestamp">${new Date(alert.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-            `;
-            alertsList.appendChild(alertDiv);
+    // Add mode-specific alerts
+    const currentMode = document.getElementById('modeSelector')?.value || 'realtime';
+    if (currentMode.includes('evacuation')) {
+        alerts.unshift({
+            type: 'critical',
+            icon: '🚨',
+            title: 'EMERGENCY EVACUATION',
+            message: 'Evacuation mode activated. All staff assist with orderly exit.',
+            priority: 0
         });
+    } else if (currentMode.includes('peak')) {
+        alerts.unshift({
+            type: 'warning',
+            icon: '📊',
+            title: 'Peak Hour Operations',
+            message: 'Venue operating at peak capacity. All services at maximum throughput.',
+            priority: 1
+        });
+    } else if (currentMode.includes('low')) {
+        if (alerts.length === 0) {
+            alerts.push({
+                type: 'success',
+                icon: '✓',
+                title: 'Normal Operations',
+                message: 'All zones operating normally. No issues detected.',
+                priority: 5
+            });
+        }
     } else {
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'alert alert-info';
-        infoDiv.innerHTML = `
-            <div class="alert-icon">✅</div>
-            <div class="alert-content">
-                <strong>System Status: Normal</strong>
-                <p>No active alerts. All systems are operating within normal parameters.</p>
-            </div>
-        `;
-        alertsList.appendChild(infoDiv);
+        // Realtime mode - only show if there are issues
+        if (alerts.length === 0) {
+            alerts.push({
+                type: 'info',
+                icon: 'ℹ️',
+                title: 'System Status',
+                message: 'All systems operational. Real-time monitoring active.',
+                priority: 5
+            });
+        }
     }
+
+    // Sort by priority and render
+    alerts.sort((a, b) => a.priority - b.priority);
+    alerts.slice(0, 6).forEach(alert => {
+        const alertDiv = document.createElement('div');
+        const typeClass = alert.type === 'critical' ? 'alert-warning' : alert.type === 'success' ? 'alert-success' : alert.type === 'info' ? 'alert-info' : 'alert-warning';
+        alertDiv.className = `alert ${typeClass}`;
+        alertDiv.innerHTML = `
+            <div class="alert-icon">${alert.icon}</div>
+            <div class="alert-content">
+                <strong>${alert.title}</strong>
+                <p>${alert.message}</p>
+                <small>${timestamp}</small>
+            </div>
+            <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
+        `;
+        alertsList.appendChild(alertDiv);
+    });
 }
 
-// Show notification toast
+// Show notification
 function showNotification(message, type = 'info') {
-    const container = document.getElementById('notification-container');
-    if (!container) return;
-
     const notification = document.createElement('div');
-    notification.className = `notification ${type} show`;
-    notification.textContent = message;
-    container.appendChild(notification);
+    notification.className = `alert alert-${type}`;
+    notification.style.position = 'fixed';
+    notification.style.top = '80px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '1000';
+    notification.style.maxWidth = '400px';
+    
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ️';
+    notification.innerHTML = `
+        <div class="alert-icon">${icon}</div>
+        <div class="alert-content">
+            <strong>${message}</strong>
+        </div>
+        <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
+    `;
+    document.body.appendChild(notification);
 
     setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            notification.remove();
-        }, 500);
+        notification.remove();
     }, 3000);
 }
+
 
 // --- INSANE LEVEL UPGRADES ---
 
@@ -572,11 +668,9 @@ function getRecommendation() {
 // Voice Alert System
 function speakAlert(message) {
     if ('speechSynthesis' in window) {
-        // Cancel any previous speech to prevent overlap
-        window.speechSynthesis.cancel();
         const speech = new SpeechSynthesisUtterance(message);
         speech.volume = 1;
-        speech.rate = 1.1;
+        speech.rate = 1;
         speech.pitch = 1;
         window.speechSynthesis.speak(speech);
     } else {
@@ -585,12 +679,11 @@ function speakAlert(message) {
 }
 
 // Override the main updateMetrics function to include the new performance page update
-// This is no longer needed with the new updateAllPages function
-// const originalUpdateMetrics = updateMetrics;
-// updateMetrics = function() {
-//     originalUpdateMetrics();
-//     updatePerformancePage();
-// }
+const originalUpdateMetrics = updateMetrics;
+updateMetrics = function() {
+    originalUpdateMetrics();
+    updatePerformancePage();
+}
 // --- END INSANE LEVEL UPGRADES ---
 
 // Mobile optimization
