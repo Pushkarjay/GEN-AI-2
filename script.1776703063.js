@@ -691,11 +691,17 @@ if (window.innerWidth < 768) {
     document.querySelector('body').style.fontSize = '14px';
 }
 
-// Add service worker support
+// Remove any previously installed worker/caches from older deployments.
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(err => {
-        console.log('Service Worker registration failed:', err);
-    });
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((reg) => reg.unregister());
+    }).catch(() => {});
+
+    if (window.caches && typeof window.caches.keys === 'function') {
+        window.caches.keys().then((keys) => {
+            keys.forEach((key) => window.caches.delete(key));
+        }).catch(() => {});
+    }
 }
 
 // Update time every second
