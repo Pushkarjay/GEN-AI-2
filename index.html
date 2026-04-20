@@ -21,6 +21,7 @@
                     <button class="nav-btn" onclick="switchView('queues')">Queue Management</button>
                     <button class="nav-btn" onclick="switchView('zones')">Zone Analytics</button>
                     <button class="nav-btn" onclick="switchView('alerts')">Alerts</button>
+                    <button class="nav-btn" onclick="switchView('architecture')">📐 System Flow</button>
                 </div>
                 <div class="mode-toggle">
                     <span class="mode-label">Mode:</span>
@@ -335,9 +336,337 @@
                     <!-- Alerts will be dynamically generated here -->
                 </div>
             </section>
+
+            <!-- System Architecture & Flow Diagrams -->
+            <section id="architecture" class="view">
+                <div class="header-section">
+                    <h2>📐 System Architecture & Data Flow</h2>
+                    <p>Complete overview of VenueFlow's intelligent crowd management pipeline</p>
+                </div>
+
+                <!-- Diagram 1: System Overview -->
+                <div class="diagram-container">
+                    <h3>1️⃣ Complete System Architecture</h3>
+                    <div id="diagram-overview" class="mermaid-diagram">
+                        %%{init: {'flowchart': {'curve': 'linear'}, 'theme': 'dark'}}%%
+                        graph TB
+                            subgraph Sensors["🎯 SENSOR LAYER"]
+                                IR["🌡️ IR Sensors<br/>Entrance/Exits"]
+                                PRESSURE["⚖️ Pressure Mats<br/>Queue Zones"]
+                                CAMERA["📹 People Counters<br/>Wi-Fi Analytics"]
+                                RFID["📡 RFID Readers<br/>Ticket Scanners"]
+                            end
+                            
+                            subgraph Edge["⚡ EDGE COMPUTING"]
+                                PROCESSOR["🖥️ Local Processor<br/>Data Aggregation"]
+                                BUFFER["💾 Ring Buffer<br/>Real-time Cache"]
+                            end
+                            
+                            subgraph API["🌐 CLOUD API LAYER"]
+                                EXPRESS["⚙️ Express.js Backend<br/>/api/venue/data<br/>/api/mode<br/>/api/zones"]
+                                WEBSOCKET["🔌 WebSocket Server<br/>3sec Updates<br/>Bidirectional"]
+                            end
+                            
+                            subgraph Frontend["💻 FRONTEND LAYER"]
+                                SPA["📱 Single Page App<br/>HTML5/CSS3/ES6"]
+                                SW["⚙️ Service Worker<br/>Offline Support"]
+                            end
+                            
+                            subgraph Display["📊 DISPLAY LAYER"]
+                                DASH["📈 Dashboard"]
+                                QUEUE["📋 Queue Mgmt"]
+                                ZONE["🗺️ Zone Analytics"]
+                                ALERTS["🚨 Alerts"]
+                            end
+                            
+                            IR --> PROCESSOR
+                            PRESSURE --> PROCESSOR
+                            CAMERA --> PROCESSOR
+                            RFID --> PROCESSOR
+                            PROCESSOR --> BUFFER
+                            BUFFER --> EXPRESS
+                            BUFFER --> WEBSOCKET
+                            EXPRESS --> SPA
+                            WEBSOCKET --> SPA
+                            SPA --> SW
+                            SPA --> DASH
+                            SPA --> QUEUE
+                            SPA --> ZONE
+                            SPA --> ALERTS
+                            
+                            style Sensors fill:#ff6b6b,color:#fff
+                            style Edge fill:#4ecdc4,color:#fff
+                            style API fill:#45b7d1,color:#fff
+                            style Frontend fill:#96ceb4,color:#fff
+                            style Display fill:#ffeaa7,color:#333
+                    </div>
+                </div>
+
+                <!-- Diagram 2: Real-Time Data Pipeline -->
+                <div class="diagram-container">
+                    <h3>2️⃣ Real-Time Data Processing Pipeline</h3>
+                    <div id="diagram-pipeline" class="mermaid-diagram">
+                        %%{init: {'flowchart': {'curve': 'linear'}, 'theme': 'dark'}}%%
+                        graph LR
+                            subgraph Collection["📥 DATA COLLECTION"]
+                                ENTCOUNT["Entrance Counter<br/>400/min"]
+                                EXITCOUNT["Exit Counter<br/>150/min"]
+                                ZONEOCCUP["Zone Occupancy<br/>5 sensors"]
+                            end
+                            
+                            subgraph Process["⚙️ PROCESSING"]
+                                AGGREGATE["Aggregate Data<br/>Real-time Calculation"]
+                                VARIANCE["Add Natural Variance<br/>±3 attendees<br/>±2% occupancy"]
+                                QUEUE_CALC["Queue Calculator<br/>Occupancy × Factor"]
+                            end
+                            
+                            subgraph Storage["💾 STATE MANAGEMENT"]
+                                CURRENT_STATE["Current Venue State<br/>venueData Object<br/>All 5 zones"]
+                                MODE_STATE["Mode Cache<br/>realtime/demo"]
+                            end
+                            
+                            subgraph Distribution["🔄 DISTRIBUTION"]
+                                REST_API["REST Endpoints<br/>HTTP GET"]
+                                WS_STREAM["WebSocket Stream<br/>3sec broadcasts"]
+                                POLLING["HTTP Polling<br/>Fallback 3sec"]
+                            end
+                            
+                            subgraph Display_System["📊 DISPLAY UPDATES"]
+                                METRICS["Metrics Update<br/>Dashboard"]
+                                QUEUES_UPD["Queue Status<br/>Wait times"]
+                                ZONES_UPD["Zone Density<br/>Heatmap"]
+                                ALERTS_UPD["Alert Generation<br/>Thresholds"]
+                            end
+                            
+                            ENTCOUNT --> AGGREGATE
+                            EXITCOUNT --> AGGREGATE
+                            ZONEOCCUP --> AGGREGATE
+                            AGGREGATE --> VARIANCE
+                            VARIANCE --> QUEUE_CALC
+                            QUEUE_CALC --> CURRENT_STATE
+                            CURRENT_STATE --> MODE_STATE
+                            MODE_STATE --> REST_API
+                            MODE_STATE --> WS_STREAM
+                            WS_STREAM --> POLLING
+                            REST_API --> METRICS
+                            REST_API --> QUEUES_UPD
+                            WS_STREAM --> ZONES_UPD
+                            WS_STREAM --> ALERTS_UPD
+                            
+                            style Collection fill:#ff6b6b,color:#fff
+                            style Process fill:#4ecdc4,color:#fff
+                            style Storage fill:#ffe66d,color:#333
+                            style Distribution fill:#95e1d3,color:#333
+                            style Display_System fill:#a8d8ea,color:#333
+                    </div>
+                </div>
+
+                <!-- Diagram 3: Zone Alert Generation Flow -->
+                <div class="diagram-container">
+                    <h3>3️⃣ Intelligent Alert Generation System</h3>
+                    <div id="diagram-alerts" class="mermaid-diagram">
+                        %%{init: {'flowchart': {'curve': 'linear'}, 'theme': 'dark'}}%%
+                        graph TD
+                            START["📊 Real-time Zone Data<br/>Occupancy %<br/>Wait Times"] --> CHECK1{Occupancy<br/>Analysis}
+                            
+                            CHECK1 -->|>90%| CRITICAL["🔴 CRITICAL ALERT<br/>Zone Overcrowding<br/>Severe delays<br/>Staff alert"]
+                            CHECK1 -->|75-90%| WARNING["⚠️ WARNING ALERT<br/>High occupancy<br/>Moderate delays"]
+                            CHECK1 -->|50-75%| INFO_HIGH["ℹ️ INFO: Wait times<br/>elevated<br/>Service slow"]
+                            CHECK1 -->|<50%| NORMAL["✓ NORMAL OPS<br/>All zones healthy"]
+                            
+                            START --> CHECK2{Mode-Specific<br/>Alerts}
+                            
+                            CHECK2 -->|Emergency Mode| EVAC["🚨 EMERGENCY ALERT<br/>EVACUATION IN PROGRESS<br/>All zones: Evacuation path<br/>Wait: 120+ min"]
+                            CHECK2 -->|Peak Hour| PEAK_ALERT["📊 Peak Hour Alert<br/>High traffic period<br/>Queue optimization active"]
+                            CHECK2 -->|Low Traffic| LOW_ALERT["✓ Low Traffic Alert<br/>Normal operations<br/>All zones available"]
+                            
+                            CRITICAL --> AGGREGATE["Aggregate Alerts<br/>Priority Sort"]
+                            WARNING --> AGGREGATE
+                            INFO_HIGH --> AGGREGATE
+                            NORMAL --> AGGREGATE
+                            EVAC --> AGGREGATE
+                            PEAK_ALERT --> AGGREGATE
+                            LOW_ALERT --> AGGREGATE
+                            
+                            AGGREGATE --> SORT["Sort by Severity<br/>Critical → Warning → Info"]
+                            SORT --> TIMESTAMP["Add Timestamp<br/>Current Zone Status"]
+                            TIMESTAMP --> DISPLAY_ALERTS["Display in UI<br/>Max 9 alerts<br/>Auto-refresh"]
+                            
+                            style START fill:#ffe66d,color:#333
+                            style CRITICAL fill:#ff6b6b,color:#fff
+                            style WARNING fill:#ffa500,color:#fff
+                            style INFO_HIGH fill:#4ecdc4,color:#fff
+                            style NORMAL fill:#26de81,color:#fff
+                            style EVAC fill:#ff3838,color:#fff,stroke:#fff,stroke-width:3px
+                            style PEAK_ALERT fill:#ffd93d,color:#333
+                            style LOW_ALERT fill:#6bcf7f,color:#fff
+                            style AGGREGATE fill:#a8d8ea,color:#333
+                            style DISPLAY_ALERTS fill:#96ceb4,color:#333
+                    </div>
+                </div>
+
+                <!-- Diagram 4: Queue Management Algorithm -->
+                <div class="diagram-container">
+                    <h3>4️⃣ Queue Management & Wait Time Calculation</h3>
+                    <div id="diagram-queues" class="mermaid-diagram">
+                        %%{init: {'flowchart': {'curve': 'linear'}, 'theme': 'dark'}}%%
+                        graph TD
+                            ZONES["5 Venue Zones<br/>Occupancy Data"] --> CALC["Calculate Queue Sizes"]
+                            
+                            CALC --> GATES["🎫 Ticket Gates<br/>Formula: Entrance Occupancy × 300<br/>Capacity: 2,400 people"]
+                            CALC --> FOOD["🍕 Food Court Queue<br/>Formula: Food Occupancy × 400<br/>Capacity: 3,200 people"]
+                            CALC --> RESTROOM["🚽 Restroom Queue<br/>Formula: Restroom Occupancy × 200<br/>Capacity: 1,600 people"]
+                            CALC --> PARKING["🅿️ Exit Parking<br/>Formula: Parking Occupancy × 350<br/>Capacity: 2,800 people"]
+                            
+                            GATES --> WAIT_CALC["Wait Time Calculation"]
+                            FOOD --> WAIT_CALC
+                            RESTROOM --> WAIT_CALC
+                            PARKING --> WAIT_CALC
+                            
+                            WAIT_CALC --> GATES_WAIT["Gate Wait Time<br/>Queue ÷ 60 people/min"]
+                            WAIT_CALC --> FOOD_WAIT["Food Wait Time<br/>Queue ÷ 20 people/min"]
+                            WAIT_CALC --> REST_WAIT["Restroom Wait<br/>Queue ÷ 10 people/min"]
+                            WAIT_CALC --> PARK_WAIT["Parking Wait<br/>Queue ÷ 30 people/min"]
+                            
+                            GATES_WAIT --> STATUS["Assign Status"]
+                            FOOD_WAIT --> STATUS
+                            REST_WAIT --> STATUS
+                            PARK_WAIT --> STATUS
+                            
+                            STATUS --> STATUS_GREEN["✅ Normal<br/><10 min"]
+                            STATUS --> STATUS_YELLOW["⏰ Moderate<br/>10-30 min"]
+                            STATUS --> STATUS_RED["🔴 Long Wait<br/>30+ min"]
+                            
+                            STATUS_GREEN --> DISPLAY["Update Queue Cards<br/>Progress Bars<br/>Wait Times<br/>Status Icons"]
+                            STATUS_YELLOW --> DISPLAY
+                            STATUS_RED --> DISPLAY
+                            
+                            style ZONES fill:#ffe66d,color:#333
+                            style GATES fill:#a8d8ea,color:#333
+                            style FOOD fill:#a8d8ea,color:#333
+                            style RESTROOM fill:#a8d8ea,color:#333
+                            style PARKING fill:#a8d8ea,color:#333
+                            style STATUS_GREEN fill:#26de81,color:#fff
+                            style STATUS_YELLOW fill:#ffa500,color:#fff
+                            style STATUS_RED fill:#ff6b6b,color:#fff
+                            style DISPLAY fill:#96ceb4,color:#333
+                    </div>
+                </div>
+
+                <!-- Diagram 5: Mode Switching State Machine -->
+                <div class="diagram-container">
+                    <h3>5️⃣ Multi-Mode State Machine</h3>
+                    <div id="diagram-modes" class="mermaid-diagram">
+                        %%{init: {'flowchart': {'curve': 'linear'}, 'theme': 'dark'}}%%
+                        stateDiagram-v2
+                            [*] --> REALTIME
+                            
+                            REALTIME: 🔴 REALTIME MODE\nActual sensor data\nAttendees: 4,200-4,400\nCapacity: 53%\nWait: 5-20 min
+                            PEAK: 📊 PEAK HOUR DEMO\nHigh traffic scenario\nAttendees: 7,500\nCapacity: 94%\nWait: 25-120 min
+                            LOW: 📊 LOW TRAFFIC DEMO\nMinimal occupancy\nAttendees: 1,500\nCapacity: 19%\nWait: 0-5 min
+                            EVACUATION: 🚨 EMERGENCY DEMO\nEvacuation scenario\nAttendees: 5,000\nCapacity: 63%\nWait: 120+ min
+                            
+                            REALTIME --> PEAK: Mode change\n(API POST /mode)
+                            PEAK --> LOW: Mode change\n(API POST /mode)
+                            LOW --> EVACUATION: Mode change\n(API POST /mode)
+                            EVACUATION --> REALTIME: Mode change\n(API POST /mode)
+                            
+                            REALTIME --> LOW: Mode change\n(Direct switch)
+                            PEAK --> REALTIME: Mode change\n(Direct switch)
+                            LOW --> PEAK: Mode change\n(Direct switch)
+                            EVACUATION --> PEAK: Mode change\n(Direct switch)
+                            
+                            note right of REALTIME
+                                Continuous sensor data
+                                Realistic variations
+                                Auto-updates via WebSocket
+                            end note
+                            
+                            note right of PEAK
+                                Simulated peak hours
+                                High stress scenario
+                                Tests system capacity
+                            end note
+                            
+                            note right of LOW
+                                Minimal crowd
+                                Normal operations
+                                System efficiency demo
+                            end note
+                            
+                            note right of EVACUATION
+                                Emergency procedures
+                                High wait times
+                                Safety protocols
+                            end note
+                    </div>
+                </div>
+
+                <!-- Diagram 6: WebSocket Communication -->
+                <div class="diagram-container">
+                    <h3>6️⃣ Real-Time WebSocket Communication</h3>
+                    <div id="diagram-websocket" class="mermaid-diagram">
+                        %%{init: {'flowchart': {'curve': 'linear'}, 'theme': 'dark'}}%%
+                        graph TD
+                            CLIENT["💻 Browser Client<br/>JavaScript SPA"] --> WS_CONNECT["WebSocket Connect<br/>ws://host/ws"]
+                            
+                            WS_CONNECT --> LISTEN["Listen for Messages<br/>onmessage handler"]
+                            
+                            SERVER["⚙️ Node.js Server<br/>Express + ws library"] --> GEN_UPDATE["Generate Update<br/>Every 3 seconds"]
+                            
+                            GEN_UPDATE --> BUILD_MSG["Build Update Message<br/>{type: 'update'<br/>data: venueData}"]
+                            
+                            BUILD_MSG --> BROADCAST["Broadcast to ALL<br/>Connected Clients<br/>ws.send()"]
+                            
+                            BROADCAST --> RECEIVE["Client Receives<br/>Message Event"]
+                            
+                            RECEIVE --> PARSE["Parse JSON Data<br/>Extract occupancy<br/>attendees, zones"]
+                            
+                            PARSE --> UPDATE_ALL["Update ALL Pages<br/>1. updateMetrics()\n2. updateQueueDisplays()\n3. updateZoneAnalytics()\n4. updateAlerts()"]
+                            
+                            UPDATE_ALL --> RENDER["Re-render UI<br/>DOM updates<br/>Smooth animation"]
+                            
+                            RENDER --> DISPLAY_USER["👥 User sees<br/>Real-time changes"]
+                            
+                            LISTEN --> RECONNECT{Connection<br/>Lost?}
+                            RECONNECT -->|Yes| RETRY["Auto Retry<br/>3 second delay"]
+                            RETRY --> WS_CONNECT
+                            RECONNECT -->|No| LISTEN
+                            
+                            LISTEN --> POLL_FB["Fallback: HTTP Polling<br/>GET /api/venue/data<br/>Every 3 seconds"]
+                            
+                            style CLIENT fill:#96ceb4,color:#333
+                            style SERVER fill:#4ecdc4,color:#fff
+                            style BROADCAST fill:#ffe66d,color:#333
+                            style UPDATE_ALL fill:#a8d8ea,color:#333
+                            style RENDER fill:#ffa500,color:#fff
+                            style DISPLAY_USER fill:#26de81,color:#fff
+                            style POLL_FB fill:#ffd93d,color:#333
+                    </div>
+                </div>
+
+                <div class="diagram-info">
+                    <h4>🎯 Key System Features</h4>
+                    <ul>
+                        <li><strong>Real-time Updates:</strong> 3-second WebSocket broadcasts to all connected clients</li>
+                        <li><strong>Multi-Mode System:</strong> Real-time + 3 demo scenarios (Peak, Low, Evacuation)</li>
+                        <li><strong>Sensor Integration:</strong> IR, Pressure, Camera, RFID sensor data aggregation</li>
+                        <li><strong>Dynamic Alerts:</strong> Occupancy-based thresholds with mode-specific scenarios</li>
+                        <li><strong>Queue Intelligence:</strong> Automatic queue calculation from zone occupancy</li>
+                        <li><strong>Redundancy:</strong> WebSocket with HTTP polling fallback for reliability</li>
+                        <li><strong>Responsive UI:</strong> All 4 pages update simultaneously on data arrival</li>
+                        <li><strong>Offline Support:</strong> Service Worker enables offline functionality</li>
+                    </ul>
+                </div>
+            </section>
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+        mermaid.contentLoaded();
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
