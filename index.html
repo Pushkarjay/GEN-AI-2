@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VenueFlow - Crowd Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-content">
+                <div class="logo">
+                    <h1>🏟️ VenueFlow</h1>
+                    <p>Smart Crowd Management</p>
+                </div>
+                <div class="nav-links">
+                    <button class="nav-btn active" onclick="switchView('dashboard')">Dashboard</button>
+                    <button class="nav-btn" onclick="switchView('queues')">Queue Management</button>
+                    <button class="nav-btn" onclick="switchView('zones')">Zone Analytics</button>
+                    <button class="nav-btn" onclick="switchView('alerts')">Alerts</button>
+                </div>
+                <div class="mode-toggle">
+                    <span class="mode-label">Mode:</span>
+                    <select id="modeSelector" class="mode-select" onchange="changeMode(this.value)">
+                        <option value="realtime" selected>🔴 Real-Time</option>
+                        <option value="demo-peak">📊 Demo: Peak Hour</option>
+                        <option value="demo-low">📊 Demo: Low Traffic</option>
+                        <option value="demo-evacuation">🚨 Demo: Emergency</option>
+                    </select>
+                    <span class="connection-status" id="connectionStatus">● Connecting...</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard View -->
+            <section id="dashboard" class="view active">
+                <div class="header-section">
+                    <h2>Real-Time Venue Overview</h2>
+                    <div class="time-info" id="timeInfo"></div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-info">
+                            <h3>Total Attendees</h3>
+                            <p class="metric-value" id="totalAttendees">0</p>
+                            <p class="metric-change positive">↑ Real-time</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">⏱️</div>
+                        <div class="metric-info">
+                            <h3>Avg Wait Time</h3>
+                            <p class="metric-value" id="avgWaitTime">0</p>
+                            <p class="metric-change" id="waitTimeChange">min</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">🚨</div>
+                        <div class="metric-info">
+                            <h3>Alert Status</h3>
+                            <p class="metric-value" id="alertStatus">CLEAR</p>
+                            <p class="metric-change positive">All Normal</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-info">
+                            <h3>Venue Capacity</h3>
+                            <p class="metric-value" id="capacityPercent">0%</p>
+                            <div class="capacity-bar">
+                                <div class="capacity-fill" id="capacityFill"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Venue Map -->
+                <div class="venue-section">
+                    <h3>Venue Zone Heatmap</h3>
+                    <div class="venue-map" id="venueMap">
+                        <div class="zone-card zone-entrance" onclick="selectZone('entrance')">
+                            <div class="zone-label">Entrance</div>
+                            <div class="zone-crowd" id="entrance-crowd">Low</div>
+                            <div class="zone-density" id="entrance-density"></div>
+                        </div>
+                        <div class="zone-card zone-main" onclick="selectZone('main-arena')">
+                            <div class="zone-label">Main Arena</div>
+                            <div class="zone-crowd" id="main-arena-crowd">Medium</div>
+                            <div class="zone-density" id="main-arena-density"></div>
+                        </div>
+                        <div class="zone-card zone-food" onclick="selectZone('food-court')">
+                            <div class="zone-label">Food Court</div>
+                            <div class="zone-crowd" id="food-court-crowd">High</div>
+                            <div class="zone-density" id="food-court-density"></div>
+                        </div>
+                        <div class="zone-card zone-parking" onclick="selectZone('parking')">
+                            <div class="zone-label">Parking</div>
+                            <div class="zone-crowd" id="parking-crowd">Medium</div>
+                            <div class="zone-density" id="parking-density"></div>
+                        </div>
+                        <div class="zone-card zone-restrooms" onclick="selectZone('restrooms')">
+                            <div class="zone-label">Restrooms</div>
+                            <div class="zone-crowd" id="restrooms-crowd">Low</div>
+                            <div class="zone-density" id="restrooms-density"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zone Details -->
+                <div class="zone-details" id="zoneDetails" style="display:none;">
+                    <h3 id="selectedZoneTitle">Zone Details</h3>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span>Current Occupancy:</span>
+                            <strong id="zoneOccupancy">0%</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>Est. Wait Time:</span>
+                            <strong id="zoneWaitTime">0 min</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>Incidents:</span>
+                            <strong id="zoneIncidents">0</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>Entry Points:</span>
+                            <strong id="zoneEntries">1</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Queue Management View -->
+            <section id="queues" class="view">
+                <div class="header-section">
+                    <h2>Queue Management System</h2>
+                    <button class="btn-primary" onclick="optimizeQueues()">Optimize Queues</button>
+                </div>
+
+                <div class="queue-grid">
+                    <div class="queue-card">
+                        <h3>🎫 Ticket Gates</h3>
+                        <div class="queue-info">
+                            <div class="queue-bar">
+                                <div class="queue-progress" style="width: 45%;"></div>
+                            </div>
+                            <p>Queue: 124 people | Wait: 8 min</p>
+                            <p class="queue-status">Gate 1-3: Open | Gate 4: Closed</p>
+                        </div>
+                    </div>
+
+                    <div class="queue-card">
+                        <h3>🍕 Food Court</h3>
+                        <div class="queue-info">
+                            <div class="queue-bar">
+                                <div class="queue-progress" style="width: 78%;"></div>
+                            </div>
+                            <p>Queue: 267 people | Wait: 35 min</p>
+                            <p class="queue-status queue-high">⚠️ Open peak hours</p>
+                        </div>
+                    </div>
+
+                    <div class="queue-card">
+                        <h3>🚻 Restrooms</h3>
+                        <div class="queue-info">
+                            <div class="queue-bar">
+                                <div class="queue-progress" style="width: 32%;"></div>
+                            </div>
+                            <p>Queue: 45 people | Wait: 5 min</p>
+                            <p class="queue-status">All facilities operational</p>
+                        </div>
+                    </div>
+
+                    <div class="queue-card">
+                        <h3>🚗 Exit Parking</h3>
+                        <div class="queue-info">
+                            <div class="queue-bar">
+                                <div class="queue-progress" style="width: 62%;"></div>
+                            </div>
+                            <p>Queue: 189 cars | Wait: 12 min</p>
+                            <p class="queue-status">Alternate exit route available</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Queue Optimization Recommendations -->
+                <div class="recommendations">
+                    <h3>📋 Recommendations</h3>
+                    <div class="rec-list">
+                        <div class="rec-item">
+                            <div class="rec-icon">✓</div>
+                            <div class="rec-content">
+                                <strong>Open Additional Counters</strong>
+                                <p>Food court needs 2 more stations to handle current demand</p>
+                            </div>
+                        </div>
+                        <div class="rec-item">
+                            <div class="rec-icon">✓</div>
+                            <div class="rec-content">
+                                <strong>Redirect Crowd</strong>
+                                <p>Suggest zone 5 (less occupied) to reduce main arena pressure</p>
+                            </div>
+                        </div>
+                        <div class="rec-item">
+                            <div class="rec-icon">✓</div>
+                            <div class="rec-content">
+                                <strong>Staff Reallocation</strong>
+                                <p>Move 3 staff members from parking to food court</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Zone Analytics View -->
+            <section id="zones" class="view">
+                <div class="header-section">
+                    <h2>Zone-Based Analytics</h2>
+                </div>
+
+                <div class="analytics-grid">
+                    <div class="chart-container">
+                        <h3>Crowd Density by Zone</h3>
+                        <div class="chart" id="densityChart">
+                            <div class="chart-bar">
+                                <div class="bar-label">Entrance</div>
+                                <div class="bar-container">
+                                    <div class="bar" style="width: 25%; background: #4CAF50;"></div>
+                                </div>
+                                <div class="bar-value">25%</div>
+                            </div>
+                            <div class="chart-bar">
+                                <div class="bar-label">Main Arena</div>
+                                <div class="bar-container">
+                                    <div class="bar" style="width: 68%; background: #FFC107;"></div>
+                                </div>
+                                <div class="bar-value">68%</div>
+                            </div>
+                            <div class="chart-bar">
+                                <div class="bar-label">Food Court</div>
+                                <div class="bar-container">
+                                    <div class="bar" style="width: 85%; background: #FF5722;"></div>
+                                </div>
+                                <div class="bar-value">85%</div>
+                            </div>
+                            <div class="chart-bar">
+                                <div class="bar-label">Parking</div>
+                                <div class="bar-container">
+                                    <div class="bar" style="width: 55%; background: #2196F3;"></div>
+                                </div>
+                                <div class="bar-value">55%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Entry/Exit Flow</h3>
+                        <div class="flow-chart">
+                            <div class="flow-item">
+                                <div class="flow-icon">⬇️</div>
+                                <div class="flow-info">
+                                    <strong>Entries/min</strong>
+                                    <p>45 people</p>
+                                </div>
+                            </div>
+                            <div class="flow-item">
+                                <div class="flow-icon">⬆️</div>
+                                <div class="flow-info">
+                                    <strong>Exits/min</strong>
+                                    <p>12 people</p>
+                                </div>
+                            </div>
+                            <div class="flow-item">
+                                <div class="flow-icon">🎯</div>
+                                <div class="flow-info">
+                                    <strong>Net Flow</strong>
+                                    <p>+33 people/min</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time-based Analytics -->
+                <div class="time-analytics">
+                    <h3>Timeline - Expected Peak Hours</h3>
+                    <div class="timeline">
+                        <div class="timeline-item active">
+                            <div class="timeline-time">2:00 PM</div>
+                            <div class="timeline-status">Low</div>
+                            <div class="timeline-bar" style="width: 20%;"></div>
+                        </div>
+                        <div class="timeline-item active">
+                            <div class="timeline-time">4:00 PM</div>
+                            <div class="timeline-status">Medium</div>
+                            <div class="timeline-bar" style="width: 50%;"></div>
+                        </div>
+                        <div class="timeline-item active">
+                            <div class="timeline-time">6:00 PM</div>
+                            <div class="timeline-status">High</div>
+                            <div class="timeline-bar" style="width: 85%;"></div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-time">8:00 PM</div>
+                            <div class="timeline-status">Peak</div>
+                            <div class="timeline-bar" style="width: 95%;"></div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-time">10:00 PM</div>
+                            <div class="timeline-status">Medium</div>
+                            <div class="timeline-bar" style="width: 45%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Alerts View -->
+            <section id="alerts" class="view">
+                <div class="header-section">
+                    <h2>System Alerts & Notifications</h2>
+                    <button class="btn-primary" onclick="clearAllAlerts()">Clear All</button>
+                </div>
+
+                <div class="alerts-container">
+                    <div class="alert alert-warning">
+                        <div class="alert-icon">⚠️</div>
+                        <div class="alert-content">
+                            <strong>Food Court Overcrowding</strong>
+                            <p>Zone capacity at 85%. Recommend redirecting traffic or opening additional counters.</p>
+                            <small>5 minutes ago</small>
+                        </div>
+                        <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <div class="alert-icon">ℹ️</div>
+                        <div class="alert-content">
+                            <strong>Parking Fill Rate Update</strong>
+                            <p>Parking zone at 55% capacity. Estimated full capacity in 45 minutes.</p>
+                            <small>12 minutes ago</small>
+                        </div>
+                        <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
+                    </div>
+
+                    <div class="alert alert-success">
+                        <div class="alert-icon">✓</div>
+                        <div class="alert-content">
+                            <strong>Queue Optimization Applied</strong>
+                            <p>Automated system opened additional ticket gates. Wait time reduced from 12 to 8 minutes.</p>
+                            <small>18 minutes ago</small>
+                        </div>
+                        <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <div class="alert-icon">ℹ️</div>
+                        <div class="alert-content">
+                            <strong>Restroom Maintenance Complete</strong>
+                            <p>All restroom facilities fully operational. Expected queue time: 5 minutes.</p>
+                            <small>25 minutes ago</small>
+                        </div>
+                        <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

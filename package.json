@@ -1,0 +1,39 @@
+{
+  "name": "venueflow",
+  "version": "2.0.0",
+  "description": "Smart crowd management system for large-scale sporting venues with real-time API and WebSocket support",
+  "main": "server.js",
+  "scripts": {
+    "build": "echo 'Build complete'",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "docker:build": "docker build -t venueflow:latest .",
+    "docker:run": "docker run -p 8080:8080 venueflow:latest",
+    "deploy": "gcloud run deploy venueflow --source . --region us-central1 --platform managed --allow-unauthenticated"
+  },
+  "keywords": [
+    "crowd-management",
+    "venue",
+    "real-time",
+    "sports",
+    "crowd-control",
+    "websocket",
+    "api"
+  ],
+  "author": "VenueFlow Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pushkarjay/GEN-AI-2"
+  },
+  "engines": {
+    "node": "18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.13.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {}
+}
+
