@@ -120,7 +120,12 @@ async function changeMode(mode) {
             console.log('Mode changed to:', result.currentMode);
             
             // Fetch fresh data for new mode
-            fetchVenueData();
+            await fetchVenueData();
+            
+            // Refresh ALL page data
+            updateMetrics();
+            updateZoneDisplays();
+            
             showNotification(`Switched to ${getModeLabel(mode)}`, 'success');
 
             // Send mode change through WebSocket if connected
